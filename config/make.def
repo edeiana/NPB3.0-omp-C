@@ -100,7 +100,7 @@ CFLAGS	= -O3 -g -D_OPENMP -fopenmp
 # Global *link time* flags. Flags for increasing maximum executable 
 # size usually go here. 
 #---------------------------------------------------------------------------
-CLINKFLAGS = -lm
+CLINKFLAGS = -lm -fopenmp
 
 
 #---------------------------------------------------------------------------
