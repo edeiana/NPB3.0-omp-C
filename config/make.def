@@ -94,7 +94,7 @@ C_INC = -I../common
 #---------------------------------------------------------------------------
 # Global *compile time* flags for C programs
 #---------------------------------------------------------------------------
-CFLAGS	= -O3 -g
+CFLAGS	= -O3 -g -D_OPENMP -fopenmp
 
 #---------------------------------------------------------------------------
 # Global *link time* flags. Flags for increasing maximum executable 
