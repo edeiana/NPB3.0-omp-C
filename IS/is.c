@@ -364,7 +364,7 @@ void full_verify()
 /*************             R  A  N  K             ****************/
 /*****************************************************************/
 
-void rank( int iteration )
+void rank( int iteration, INT_TYPE **prv_buff1, int nthreads, const int ithread )
 {
 
     INT_TYPE    i, j, k;
@@ -374,7 +374,7 @@ void rank( int iteration )
     INT_TYPE    key;
     INT_TYPE    min_key_val, max_key_val;
 
-    INT_TYPE	prv_buff1[MAX_KEY];
+    //INT_TYPE	prv_buff1[MAX_KEY];
 
 #pragma omp master
   {
@@ -389,11 +389,26 @@ void rank( int iteration )
 /*  Clear the work array */
     for( i=0; i<MAX_KEY; i++ )
         key_buff1[i] = 0;
+
+    if (*prv_buff1 == NULL){
+      int numElements = MAX_KEY*nthreads;
+      *prv_buff1 = (INT_TYPE*) malloc(numElements * sizeof(INT_TYPE));
+      if ((*prv_buff1 == NULL) && (numElements != 0)){
+        fprintf(stderr, "prv_buff1 malloc failed with code %d\n", EXIT_FAILURE);
+        exit(EXIT_FAILURE);
+      }
+    }
+    //fprintf(stderr, "MAX_KEY = %d\n", MAX_KEY);
+    //fprintf(stderr, "nthreads = %d\n", nthreads);
+    //fprintf(stderr, "sizeof(INT_TYPE) = %u\n", sizeof(INT_TYPE));
+    //fprintf(stderr, "len(prv_buff1) = %u\n", MAX_KEY*nthreads*sizeof(INT_TYPE));
+    //fprintf(stderr, "prv_buff1 = %p\n", prv_buff1);
+
   }
 #pragma omp barrier  
 
   for (i=0; i<MAX_KEY; i++)
-      prv_buff1[i] = 0;
+      (*prv_buff1)[ithread*MAX_KEY + i] = 0;
 
 /*  Copy keys into work array; keys in key_array will be reused each iter. */
 #pragma omp for nowait
@@ -406,18 +421,24 @@ void rank( int iteration )
     own indexes to determine how many of each there are: their
     individual population                                       */
 
-        prv_buff1[key_buff2[i]]++;  /* Now they have individual key   */
+        (*prv_buff1)[ithread*MAX_KEY + key_buff2[i]]++;  /* Now they have individual key   */
     }
                                        /* population                     */
     for( i=0; i<MAX_KEY-1; i++ )   
-        prv_buff1[i+1] += prv_buff1[i];  
+        (*prv_buff1)[ithread*MAX_KEY + i + 1] += (*prv_buff1)[ithread*MAX_KEY + i];
 
+// ED: we need to wait for all prv_buff1 to be ready before the following reduction
+#pragma omp barrier  
 
-#pragma omp critical
-    {
-	for( i=0; i<MAX_KEY; i++ )
-	    key_buff1[i] += prv_buff1[i];
-    }
+//#pragma omp critical
+//    {
+  #pragma omp for
+	for( i=0; i<MAX_KEY; i++ ){
+      for (int t = 0; t < nthreads; ++t){
+	        key_buff1[i] += (*prv_buff1)[t*MAX_KEY + i];
+      }
+  }
+//    }
 
 /*  To obtain ranks of each key, successively add the individual key
     population, not forgetting to add m, the total of lesser keys,
@@ -633,10 +654,21 @@ main( argc, argv )
                 1220703125.00 );                 /* Random number gen mult */
 
 
+    // ED: create pointer to prv_buff1 outside parallel region
+    INT_TYPE *prv_buff1 = NULL;
+
 /*  Do one interation for free (i.e., untimed) to guarantee initialization of  
     all data and code pages and respective tables */
-#pragma omp parallel    
-    rank( 1 );  
+#pragma omp parallel shared(prv_buff1)
+    {
+    nthreads = omp_get_num_threads();
+    const int ithread = omp_get_thread_num(); 
+    rank( 1, &prv_buff1, nthreads, ithread );
+    }
+
+    // ED: free the now dynamically allocated prv_buff1
+    free(prv_buff1);
+    prv_buff1 = NULL;
 
 /*  Start verification counter */
     passed_verification = 0;
@@ -649,19 +681,25 @@ main( argc, argv )
 
 /*  This is the main iteration */
     
-#pragma omp parallel private(iteration)    
+#pragma omp parallel private(iteration) shared(prv_buff1)
     for( iteration=1; iteration<=MAX_ITERATIONS; iteration++ )
     {
 #pragma omp master	
         if( CLASS != 'S' ) printf( "        %d\n", iteration );
 	
-        rank( iteration );
+        nthreads = omp_get_num_threads();
+        const int ithread = omp_get_thread_num(); 
+ 
+        rank( iteration, &prv_buff1, nthreads, ithread );
 	
-#if defined(_OPENMP)	
-#pragma omp master
-	nthreads = omp_get_num_threads();
-#endif /* _OPENMP */	
+//#if defined(_OPENMP)	
+//#pragma omp master
+//	nthreads = omp_get_num_threads();
+//#endif /* _OPENMP */	
     }
+    
+    // ED: free the now dynamically allocated prv_buff1
+    free(prv_buff1);
 
 /*  End of timing, obtain maximum time of all processors */
     timer_stop( 0 );
