@@ -1,0 +1,16 @@
+#!/bin/bash -e
+
+# Get path to this file
+THIS_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )" ;
+
+# Setup the python virtual environment for opentuner
+virtualEnvDir="${THIS_PATH}/virtualEnv" ;
+if ! test -d ${virtualEnvDir} ; then
+  mkdir ${virtualEnvDir} ;
+  virtualenv -p python2 ${virtualEnvDir} ;
+  source ${virtualEnvDir}/bin/activate ;
+  pip install --upgrade pip ;
+
+else
+  source ${virtualEnvDir}/bin/activate ;
+fi
