@@ -37,6 +37,17 @@
 #include <omp.h>
 #endif /* _OPENMP */
 
+#include<stdint.h>
+
+static inline uint64_t __attribute__((always_inline)) rdtsc (void){
+  uint32_t lo, hi;
+  asm volatile("rdtsc" : "=a"(lo), "=d"(hi));
+  return lo | ((uint64_t)(hi) << 32);
+}
+
+unsigned long long timeCritical = 0;
+unsigned long long timeRank = 0;
+unsigned long long rankCalls = 0;
 
 /*****************************************************************/
 /* For serial IS, buckets are not really req'd to solve NPB1 IS  */
@@ -367,6 +378,8 @@ void full_verify()
 void rank( int iteration )
 {
 
+    unsigned long long timeStartRank = rdtsc();
+    
     INT_TYPE    i, j, k;
     INT_TYPE    l, m;
 
@@ -413,11 +426,14 @@ void rank( int iteration )
         prv_buff1[i+1] += prv_buff1[i];  
 
 
+  unsigned long long timeStartCritical = rdtsc();
 #pragma omp critical
     {
 	for( i=0; i<MAX_KEY; i++ )
 	    key_buff1[i] += prv_buff1[i];
     }
+  unsigned long long timeStopCritical = rdtsc();
+  timeCritical += timeStopCritical - timeStartCritical;
 
 /*  To obtain ranks of each key, successively add the individual key
     population, not forgetting to add m, the total of lesser keys,
@@ -573,6 +589,10 @@ void rank( int iteration )
         key_buff_ptr_global = key_buff1;
 
   } /* end master */
+
+  unsigned long long timeStopRank = rdtsc();
+  timeRank += timeStopRank - timeStartRank;
+  rankCalls += 1;
 }      
 
 
@@ -699,7 +719,11 @@ main( argc, argv )
                      CLINKFLAGS,
 		     "randlc");
 
-
+    double avgTimeRank = ((double)timeRank)/((double)rankCalls);
+    double avgTimeCritical = ((double)timeCritical)/((double)rankCalls);
+    fprintf(stderr, "rankCalls = %llu\n", rankCalls); // rankCalls == iterations + 1
+    fprintf(stderr, "avgTimeRank = %f\n", avgTimeRank);
+    fprintf(stderr, "avgTimeCritical = %f\n", avgTimeCritical);
 
          /**************************/
 }        /*  E N D  P R O G R A M  */
