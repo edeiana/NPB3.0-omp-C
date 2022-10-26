@@ -22,6 +22,9 @@ cd ${outputDir} ;
 timeFile="time.txt" ;
 rm -f ${timeFile} ;
 
+outputFile="output.txt" ;
+rm -f ${outputFile} ;
+
 for i in $(seq 1 1 ${numOfRuns}) ; do
-  export OMP_NUM_THREADS=12 && /usr/bin/time --output=${timeFile} --append --format=%e taskset -c 1,3,5,7,9,11,13,15,17,19,21,23 ./../../bin/${binaryToRun} ;
+  export OMP_NUM_THREADS=12 && /usr/bin/time --output=${timeFile} --append --format=%e taskset -c 1,3,5,7,9,11,13,15,17,19,21,23 ./../../bin/${binaryToRun} &>> ${outputFile} ;
 done
