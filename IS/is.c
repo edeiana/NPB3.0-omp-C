@@ -378,8 +378,6 @@ void full_verify()
 void rank( int iteration )
 {
 
-    unsigned long long timeStartRank = rdtsc();
-    
     INT_TYPE    i, j, k;
     INT_TYPE    l, m;
 
@@ -405,6 +403,8 @@ void rank( int iteration )
   }
 #pragma omp barrier  
 
+  unsigned long long timeStartRank = rdtsc();
+    
   for (i=0; i<MAX_KEY; i++)
       prv_buff1[i] = 0;
 
@@ -434,6 +434,9 @@ void rank( int iteration )
     }
   unsigned long long timeStopCritical = rdtsc();
   timeCritical += timeStopCritical - timeStartCritical;
+
+  unsigned long long timeStopRank = rdtsc();
+  timeRank += timeStopRank - timeStartRank;
 
 /*  To obtain ranks of each key, successively add the individual key
     population, not forgetting to add m, the total of lesser keys,
@@ -590,8 +593,6 @@ void rank( int iteration )
 
   } /* end master */
 
-  unsigned long long timeStopRank = rdtsc();
-  timeRank += timeStopRank - timeStartRank;
   rankCalls += 1;
 }      
 
