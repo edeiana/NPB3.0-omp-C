@@ -39,7 +39,7 @@ rm -f ${outputFile} ;
 for i in $(seq 1 1 ${numOfRuns}) ; do
   #export OMP_NUM_THREADS=12 && /usr/bin/time --output=${timeFile} --append --format=%e taskset -c 1,3,5,7,9,11,13,15,17,19,21,23 ./../../bin/${binaryToRun} &>> ${outputFile} ; # piraat
   
-  export OMP_NUM_THREADS=${numOfCores} && ${gitRepoDir}/bin/${binaryToRun} &>> ${outputFile} ; # fix
+  export OMP_NUM_THREADS=${numOfCores} && ${gitRepoDir}/bin/${binaryToRun} &> ${outputFile} ; # fix
   time=`cat ${outputFile} | grep "Time in seconds" | awk '{ print $5 }'` ;
   echo "${time}" >> ${timeFile} ;
 
