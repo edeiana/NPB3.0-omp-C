@@ -29,6 +29,7 @@
   OpenMP C version: S. Satoh
   
 --------------------------------------------------------------------*/
+extern double timer_read(int);
 
 #include "npbparams.h"
 #include <stdlib.h>
